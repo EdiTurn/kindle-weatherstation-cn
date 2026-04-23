@@ -1,9 +1,7 @@
 ### API URL, don't touch
-api_url = 'https://api.openweathermap.org/data/3.0/onecall?'
+api_url = 'https://weatherapi.market.xiaomi.com/wtr-v3/weather/all?isGlobal=false&locale=zh_cn&appKey=weather20151024&sign=zUFJoAR2ZVrDy1vF3D07'
 
-### Change your key
-api_key = '00000000000000000000000000000000'
+### Adjust your lat/lon
+latitude = ''
+longitude = ''
 
-### Adjust your lat/lon, units and language
-### --> https://openweathermap.org/api/one-call-api
-api_param = 'lat=53.5&lon=10&units=metric&lang=de'

@@ -6,9 +6,11 @@ import json
 import codecs
 import subprocess
 import config
+import locale
 
+status = dict([('0','晴'),('1','多云'),('2','阴'),('3','阵雨'),('4','雷阵雨'),('5','雷阵雨并伴有冰雹'),('6','雨夹雪'),('7','小雨'),('8','中雨'),('9','大雨'),('10','暴雨'),('11','大暴雨'),('12','特大暴雨'),('13','阵雪'),('14','小雪'),('15','中雪'),('16','大雪'),('17','暴雪'),('18','雾'),('19','冻雨'),('20','沙尘暴'),('21','小到中雨'),('22','中到大雨'),('23','大到暴雨'),('24','暴雨到大暴雨'),('25','大暴雨到特大暴雨'),('26','小到中雪'),('27','中到大雪'),('28','大到暴雪'),('29','浮尘'),('30','扬沙'),('31','强沙尘暴'),('32','浓雾'),('49','强浓雾'),('53','霾'),('54','中度霾 '),('55','重度霾'),('56','严重霾'),('57','大雾'),('58','特强浓雾'),('301','雨'),('302','雪'),('99','未知')])
 
-api_url = config.api_url + config.api_param + '&appid=' + config.api_key
+api_url = config.api_url + '&latitude=' + config.latitude + '&longitude=' + config.longitude
 
 try:
     r = requests.get(api_url)
@@ -23,31 +25,38 @@ except requests.exceptions.RequestException as e:
 # read the data from the URL and print it
 weather = r.json()
 
+# 指定输出中文
+locale.setlocale(locale.LC_TIME, 'zh_CN.UTF-8')
+
 # process SVG
 output = codecs.open('weather-preprocess.svg', 'r', encoding='utf-8').read()
 
-output = output.replace('#NOW', datetime.fromtimestamp(weather['current']['dt']).strftime('%d %b %Y, %H:%M:%S'))
+current = datetime.fromisoformat(weather['current']['pubTime'])
+sunrise = datetime.fromisoformat(weather['forecastDaily']['sunRiseSet']['value'][0]['from'])
+sunset = datetime.fromisoformat(weather['forecastDaily']['sunRiseSet']['value'][0]['to'])
+tomorrow_sunrise = datetime.fromisoformat(weather['forecastDaily']['sunRiseSet']['value'][1]['from'])
+tomorrow_sunset = datetime.fromisoformat(weather['forecastDaily']['sunRiseSet']['value'][1]['to'])
+
+output = output.replace('#NOW', current.strftime('%Y-%m-%d  %H:%M:%S'))
 
 # current weather
-output = output.replace('#IC00',weather['current']['weather'][0]['icon'])
-output = output.replace('#TN','{:.0f}'.format(weather['current']['temp']))
-output = output.replace('#HI00','{:.0f}'.format(weather['daily'][0]['temp']['max']))
-output = output.replace('#LO00','{:.0f}'.format(weather['daily'][0]['temp']['min']))
-output = output.replace('#SUMNOW', weather['current']['weather'][0]['description'])
-# output = output.replace('#SUMHR', weather['hourly'][0]['weather'][0]['description'])
-output = output.replace('#DP0', '{:.0f}'.format(weather['daily'][0]['pop'] * 100))
-# rain and snow keys are not always present.
-precip = 0
-if 'rain' in weather['daily'][0]:
-    precip = weather['daily'][0]['rain']
-if 'snow' in weather['daily'][0]:
-    precip += weather['daily'][0]['snow']
-output = output.replace('#DM0', '{:.2f}'.format(precip))
-output = output.replace('#DBP', '{:.0f}'.format(weather['daily'][0]['pressure']))
-output = output.replace('#DHU', '{:.0f}'.format(weather['daily'][0]['humidity']))
+if current > sunrise and current < sunset:
+    output = output.replace('#IC',weather['current']['weather']+'d')
+else:
+    output = output.replace('#IC',weather['current']['weather']+'n')
 
-output = output.replace('#SR', datetime.fromtimestamp(weather['daily'][0]['sunrise']).strftime('%H:%M'))
-output = output.replace('#SS', datetime.fromtimestamp(weather['daily'][0]['sunset']).strftime('%H:%M'))
+output = output.replace('#TN',weather['current']['temperature']['value'])
+output = output.replace('#HI',weather['forecastDaily']['temperature']['value'][0]['from'])
+output = output.replace('#LO',weather['forecastDaily']['temperature']['value'][0]['to'])
+output = output.replace('#SUMNOW', status[weather['current']['weather']])
+# output = output.replace('#SUMHR', weather['hourly'][0]['weather'][0]['description'])
+output = output.replace('#DP0', weather['forecastDaily']['precipitationProbability']['value'][0])
+
+output = output.replace('#DBP', weather['current']['pressure']['value'])
+output = output.replace('#DHU', weather['current']['humidity']['value'])
+
+output = output.replace('#SR', sunrise.strftime('%H:%M'))
+output = output.replace('#SS', sunset.strftime('%H:%M'))
 
 # battery
 # depending on board type
@@ -59,33 +68,24 @@ battery_capacity,stderr = proc_out.communicate()
 output = output.replace('#BAT', battery_capacity.decode("utf-8"))
 
 # next 12 hours
-for i in range(1, 13):
+for i in range(0, 12):
     istr = "{:02d}".format(i)
-    output = output.replace('#IC'+istr, weather['hourly'][i]['weather'][0]['icon'])
-    output = output.replace('#TM'+istr, str(datetime.fromtimestamp(weather['hourly'][i]['dt']).strftime('%H:%M')))
-    output = output.replace('#TE'+istr, '{:.0f}'.format(weather['hourly'][i]['temp']))
-    output = output.replace('#PP'+istr, '{:.0f}'.format(weather['hourly'][i]['pop'] * 100))
-    precip = 0
-    if 'rain' in weather['hourly'][i]:
-        precip = weather['hourly'][i]['rain']['1h']
-    if 'snow' in weather['hourly'][i]:
-        precip += weather['hourly'][i]['snow']['1h']
-    output = output.replace('#PA'+istr, '{:.2f}'.format(precip))
+    time = datetime.fromisoformat(weather['forecastHourly']['wind']['value'][i]['datetime'])
+    if (time > sunrise and time < sunset) or (time > tomorrow_sunrise and time < tomorrow_sunset):
+        output = output.replace('#HC'+istr, str(weather['forecastHourly']['weather']['value'][i])+'d')
+    else:
+        output = output.replace('#HC'+istr, str(weather['forecastHourly']['weather']['value'][i])+'n')
+    output = output.replace('#HTM'+istr, time.strftime('%H:%M'))
+    output = output.replace('#HTE'+istr, str(weather['forecastHourly']['temperature']['value'][i]))
 
 #next 7 days
-for i in range (1, 8):
+for i in range (0, 7):
     istr = str(i)
-    output = output.replace('#DA'+istr, str(datetime.fromtimestamp(weather['daily'][i]['dt']).strftime('%a %d.%-m.')))
-    output = output.replace('#DI'+istr, weather['daily'][i]['weather'][0]['icon'])
-    output = output.replace('#DH'+istr, '{:.0f}'.format(weather['daily'][i]['temp']['max']))
-    output = output.replace('#DL'+istr, '{:.0f}'.format(weather['daily'][i]['temp']['min']))
-    output = output.replace('#DP'+istr, '{:.0f}'.format(weather['daily'][i]['pop'] * 100))
-    precip = 0
-    if 'rain' in weather['daily'][i]:
-        precip = weather['daily'][i]['rain']
-    if 'snow' in weather['daily'][i]:
-        precip += weather['daily'][i]['snow']
-    output = output.replace('#DM'+istr, '{:.2f}'.format(precip))
+    output = output.replace('#DA'+istr, datetime.fromisoformat(weather['forecastDaily']['sunRiseSet']['value'][i]['from']).strftime('%-m-%d 周%a'))
+    output = output.replace('#DICD'+istr, weather['forecastDaily']['weather']['value'][i]['from']+'d')
+    output = output.replace('#DH'+istr, weather['forecastDaily']['temperature']['value'][i]['from'])
+    output = output.replace('#DL'+istr, weather['forecastDaily']['temperature']['value'][i]['to'])
+    output = output.replace('#DICN'+istr, weather['forecastDaily']['weather']['value'][i]['to']+'n')
 
 #output = output.replace('#SUMDAILY', weather['daily']['summary'])
 
