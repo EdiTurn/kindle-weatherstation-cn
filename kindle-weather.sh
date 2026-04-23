@@ -127,7 +127,7 @@ while true; do
 	fi
 
 	#echo `date -d @${WAKEUP_TIME}` | xargs -0 eips
-	BAT=$(gasgauge-info -s | sed s/%//)
+	BAT=$(lipc-get-prop com.lab126.powerd battLevel)
 #	echo $BAT | xargs -0 eips -f 1 1
 	echo `date '+%Y-%m-%d_%H:%M:%S'`: Battery level: $BAT >> $LOG
 

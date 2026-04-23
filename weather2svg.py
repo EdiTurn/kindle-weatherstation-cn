@@ -59,13 +59,13 @@ output = output.replace('#SR', sunrise.strftime('%H:%M'))
 output = output.replace('#SS', sunset.strftime('%H:%M'))
 
 # battery
-# depending on board type
-# could also be e.g. /sys/devices/system/yoshi_battery/yoshi_battery0/battery_capacity
-proc_out = subprocess.Popen("gasgauge-info -s".split(),
+proc_out = subprocess.Popen(["lipc-get-prop", "com.lab126.powerd", "battLevel"],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
-battery_capacity,stderr = proc_out.communicate()
-output = output.replace('#BAT', battery_capacity.decode("utf-8"))
+battery_capacity, stderr = proc_out.communicate()
+
+batt_val = battery_capacity.decode("utf-8").strip()
+output = output.replace('#BAT', batt_val + '%')
 
 # next 12 hours
 for i in range(0, 12):
