@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import time
 import requests
 from datetime import datetime
 import json
@@ -12,18 +13,30 @@ status = dict([('0','晴'),('1','多云'),('2','阴'),('3','阵雨'),('4','雷�
 
 api_url = config.api_url + '&latitude=' + config.latitude + '&longitude=' + config.longitude
 
-try:
-    r = requests.get(api_url)
-    r.raise_for_status()
-except requests.exceptions.HTTPError as errh:
-    print ("Http Error: ",errh)
-    exit(-1)
-except requests.exceptions.RequestException as e:
-    print ("Problem getting data: " + str(e))
-    exit(-1)
+max_retries = getattr(config, 'max_retries', 3)
+retry_delay = getattr(config, 'retry_delay', 5)
 
-# read the data from the URL and print it
-weather = r.json()
+weather = None
+
+for attempt in range(max_retries):
+    try:
+        r = requests.get(api_url, timeout=10)
+        r.raise_for_status()
+        
+        weather = r.json()
+        break
+        
+    except requests.exceptions.HTTPError as errh:
+        print(f"Http Error (Attempt {attempt + 1}/{max_retries}): {errh}")
+    except requests.exceptions.RequestException as e:
+        print(f"Problem getting data (Attempt {attempt + 1}/{max_retries}): {e}")
+    
+    if attempt < max_retries - 1:
+        print(f"Retrying in {retry_delay} seconds...")
+        time.sleep(retry_delay)
+else:
+    print("All retries failed. Exiting.")
+    exit(-1)
 
 # 指定输出中文
 locale.setlocale(locale.LC_TIME, 'zh_CN.UTF-8')
