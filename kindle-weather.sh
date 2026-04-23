@@ -33,7 +33,7 @@ echo "`date '+%Y-%m-%d_%H:%M:%S'`: Starting up, killing framework et. al." >> $L
 ### stop processes that we don't need
 stop lab126_gui
 ### give an update to the outside world...
-echo 0 > $FBROTATE
+echo 2 > $FBROTATE
 $FBINK -w -c -f -m -t $FONT,size=20,top=410,bottom=0,left=0,right=0 "Starting weatherstation..." > /dev/null 2>&1
 #echo 3 > $FBROTATE
 sleep 1
@@ -80,7 +80,7 @@ while true; do
     ### Dim Backlight
     echo -n 0 > $BACKLIGHT
     ### Force landscape mode
-    echo 0 > $FBROTATE
+    echo 2 > $FBROTATE
 
 	### Disable CPU Powersave
 	echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
