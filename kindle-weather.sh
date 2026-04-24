@@ -2,6 +2,8 @@
 
 PWD=$(pwd)
 LOG="/mnt/us/weatherstation.log"
+SESSION_LOG="/tmp/weather_session.log"
+
 SLEEP_MINUTES=60
 FBINK="fbink -q"
 FONT="regular=/usr/java/lib/fonts/Palatino-Regular.ttf"
@@ -71,11 +73,13 @@ echo "`date '+%Y-%m-%d_%H:%M:%S'`: Entering main loop..." >> $LOG
 
 while true; do
 
-	NOW=$(date +%s)
+    echo "===================================" > $SESSION_LOG
+    echo "`date '+%Y-%m-%d_%H:%M:%S'`: Woke up, starting update cycle" >> $SESSION_LOG
 
-	let SLEEP_SECONDS=60*SLEEP_MINUTES
-	let WAKEUP_TIME=$NOW+SLEEP_SECONDS
-	echo `date '+%Y-%m-%d_%H:%M:%S'`: Wake-up time set for  `date -d @${WAKEUP_TIME}` >> $LOG
+    BAT=$(lipc-get-prop com.lab126.powerd battLevel)
+    echo "`date '+%Y-%m-%d_%H:%M:%S'`: Battery level: $BAT" >> $SESSION_LOG
+
+    NOW=$(date +%s)
 
     ### Dim Backlight
     echo -n 0 > $BACKLIGHT
@@ -87,7 +91,7 @@ while true; do
 
     lipc-set-prop com.lab126.cmd wirelessEnable 1
     ### Wait for wifi interface to come up
-    echo `date '+%Y-%m-%d_%H:%M:%S'`: Waiting for wifi interface to come up... >> $LOG
+    echo `date '+%Y-%m-%d_%H:%M:%S'`: Waiting for wifi interface to come up... >> $SESSION_LOG
     while wait_wlan_ready; do
         sleep 1
     done
@@ -97,39 +101,34 @@ while true; do
 
 	### Wait for WIFI connection
     TRYCNT=0
-    NOWIFI=0
-    echo `date '+%Y-%m-%d_%H:%M:%S'`: Waiting for wifi interface to become ready... >> $LOG
+    WIFI_STATUS=0
+    echo `date '+%Y-%m-%d_%H:%M:%S'`: Waiting for wifi interface to become ready... >> $SESSION_LOG
 	while wait_wlan_connected; do
         if [ ${TRYCNT} -gt 30 ]; then
             ### waited long enough
-            echo "`date '+%Y-%m-%d_%H:%M:%S'`: No Wifi... ($TRYCNT)" >> $LOG
-            NOWIFI=1
-            eips -f -g $PWD/error.png
+            echo "`date '+%Y-%m-%d_%H:%M:%S'`: ERROR - Wi-Fi timeout after 30s" >> $SESSION_LOG
+            WIFI_STATUS=4  # 错误代码 4 对应 WiFi 连接错误
             break
         fi
 	  sleep 1
       let TRYCNT=$TRYCNT+1
 	done
 
-	echo `date '+%Y-%m-%d_%H:%M:%S'`: WIFI connected! >> $LOG
+    $PWD/create-png.sh $WIFI_STATUS
+    $FBINK -c -f -i kindle-weather.png -g w=-1,h=-1
 
-	### Get Weatherdata
-	echo `date '+%Y-%m-%d_%H:%M:%S'`: Getting weatherdata >> $LOG
-	rm -f $PWD/kindle-weather.png
-
-	if $PWD/create-png.sh; then
-	  #eips -f -g $PWD/kindle-weather.png
-      $FBINK -c -f -i kindle-weather.png -g w=-1,h=-1
-	else
-      echo `date '+%Y-%m-%d_%H:%M:%S'`: Something went wrong getting weatherdata >> $LOG
-	  eips -f -g $PWD/error.png
-      sleep 60
-	fi
-
-	#echo `date -d @${WAKEUP_TIME}` | xargs -0 eips
-	BAT=$(lipc-get-prop com.lab126.powerd battLevel)
-#	echo $BAT | xargs -0 eips -f 1 1
-	echo `date '+%Y-%m-%d_%H:%M:%S'`: Battery level: $BAT >> $LOG
+    cat $SESSION_LOG >> $LOG
+    
+    # 检查总日志大小并裁剪
+    MAX_SIZE=102400
+    if [ -f "$LOG" ]; then
+        SIZE=$(wc -c < "$LOG")
+        if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+            echo "[Log Rotated at $(date)]" > "$LOG.tmp"
+            tail -n 500 "$LOG" >> "$LOG.tmp"
+            mv "$LOG.tmp" "$LOG"
+        fi
+    fi
 
     ### Enable powersave
     echo powersave > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
@@ -141,8 +140,10 @@ while true; do
 	sleep 3
 
     ### set wake up time to one hour
+    let SLEEP_SECONDS=60*SLEEP_MINUTES
+	let WAKEUP_TIME=$NOW+SLEEP_SECONDS
 	rtcwake -d /dev/rtc1 -m no -s $SLEEP_SECONDS
 	### Go into Suspend to Memory (STR)
-	echo `date '+%Y-%m-%d_%H:%M:%S'`: Sleeping now... >> $LOG
+	echo `date '+%Y-%m-%d_%H:%M:%S'`: Sleeping now...... Next wake-up time set for  `date -d @${WAKEUP_TIME}`>> $LOG
 	echo "mem" > /sys/power/state
 done

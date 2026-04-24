@@ -8,8 +8,13 @@ import codecs
 import subprocess
 import config
 import locale
+import sys
 
 status = dict([('0','晴'),('1','多云'),('2','阴'),('3','阵雨'),('4','雷阵雨'),('5','雷阵雨并伴有冰雹'),('6','雨夹雪'),('7','小雨'),('8','中雨'),('9','大雨'),('10','暴雨'),('11','大暴雨'),('12','特大暴雨'),('13','阵雪'),('14','小雪'),('15','中雪'),('16','大雪'),('17','暴雪'),('18','雾'),('19','冻雨'),('20','沙尘暴'),('21','小到中雨'),('22','中到大雨'),('23','大到暴雨'),('24','暴雨到大暴雨'),('25','大暴雨到特大暴雨'),('26','小到中雪'),('27','中到大雪'),('28','大到暴雪'),('29','浮尘'),('30','扬沙'),('31','强沙尘暴'),('32','浓雾'),('49','强浓雾'),('53','霾'),('54','中度霾 '),('55','重度霾'),('56','严重霾'),('57','大雾'),('58','特强浓雾'),('301','雨'),('302','雪'),('99','未知')])
+
+if not config.latitude or not config.longitude:
+    print("Error: Latitude/Longitude not set in config.py")
+    sys.exit(3) # 错误代码 3 对应经纬度未设置
 
 api_url = config.api_url + '&latitude=' + config.latitude + '&longitude=' + config.longitude
 
@@ -36,7 +41,7 @@ for attempt in range(max_retries):
         time.sleep(retry_delay)
 else:
     print("All retries failed. Exiting.")
-    exit(-1)
+    sys.exit(2) # 错误代码 2 对应天气数据请求失败
 
 # 指定输出中文
 locale.setlocale(locale.LC_TIME, 'zh_CN.UTF-8')

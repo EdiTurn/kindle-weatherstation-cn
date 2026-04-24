@@ -9,3 +9,6 @@ longitude = ''
 max_retries = 3
 # 每次重试之间的等待时间（秒）
 retry_delay = 5
+
+# 当遇到错误时, 设置为 True 会在屏幕上显示详细 log
+debug = True  
