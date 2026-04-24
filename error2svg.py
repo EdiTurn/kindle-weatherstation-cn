@@ -28,7 +28,7 @@ def generate_error_svg(error_type, session_log_path):
 
     # SVG layout settings
     # Screen size assumed to be 800x600 (landscape mode)
-    svg_header = '<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" font-family="Sarasa Gothic SC, sans-serif">'
+    svg_header = '<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" font-family="HarmonyOS Sans SC, sans-serif">'
     
     # Base error icon (Circle with an 'X')
     icon_svg = '''

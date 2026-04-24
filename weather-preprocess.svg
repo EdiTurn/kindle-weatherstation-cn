@@ -342,7 +342,7 @@
         d="M23.4761,13.9932,16.8472,3.4365a1.04,1.04,0,0,0-1.6944,0L8.4941,14.0444A9.9861,9.9861,0,0,0,7,19a9,9,0,0,0,18,0A10.0632,10.0632,0,0,0,23.4761,13.9932ZM16,26.0005a7.0089,7.0089,0,0,1-7-7,7.978,7.978,0,0,1,1.2183-3.9438l.935-1.4888L21.2271,23.6411A6.9772,6.9772,0,0,1,16,26.0005Z" />
     </g>
   </defs>
-  <g font-family="Sarasa Gothic SC, sans-serif" font-weight="normal">
+  <g font-family="HarmonyOS Sans SC, sans-serif" font-weight="normal">
     <g transform="translate(2 2)">
       <text x="5" y="15" font-size="16px">#NOW</text>
       <use transform="matrix(0.7 0 0 0.55 780 3)" width="100%" height="100%"
@@ -377,8 +377,7 @@
         <g id="g332" transform="translate(40 0)" font-size="30px">
           <text id="text318" x="0" y="22">#SR</text>
           <text id="text320" x="0" y="63">#SS</text>
-          <text id="text326" x="0" y="104">#DBP</text>
-          <text id="text326_unit" x="70" y="104">hPa</text>
+          <text id="text326" x="0" y="104">#DBPhPa</text>
           <text id="text328" x="0" y="145">#DHU%</text>
         </g>
       </g>
